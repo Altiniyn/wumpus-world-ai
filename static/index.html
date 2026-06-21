@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Wumpus World Game - AI Agent with Knowledge Base, Inference Engine, and Visualization">
+  <title>Wumpus World | AI Agent Game</title>
+  <link rel="stylesheet" href="/static/index.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐉</text></svg>">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="game-header" id="gameHeader">
+    <div class="logo">
+      <div class="logo-icon">🐉</div>
+      <h1>Wumpus World <span>| AI Agent</span></h1>
+    </div>
+    <div class="header-controls">
+      <button class="btn" id="btnNewGame" onclick="showLevelSelect()">🔄 New Game</button>
+      <button class="btn btn-primary" id="btnAutoPlay" onclick="autoPlay()">🤖 Auto Play</button>
+      <button class="btn" id="btnToggleReveal" onclick="toggleReveal()">👁️ Reveal Map</button>
+    </div>
+  </header>
+
+  <!-- LEVEL SELECT OVERLAY -->
+  <div class="level-overlay hidden" id="levelOverlay">
+    <div class="level-select-card">
+      <h2>🎮 Select Difficulty</h2>
+      <p class="level-subtitle">Choose your challenge level</p>
+      <div class="level-grid" id="levelGrid"></div>
+      <button class="btn" onclick="hideLevelSelect()" style="width:100%;justify-content:center;margin-top:12px;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="game-container">
+    <!-- LEFT: Grid Area -->
+    <div class="grid-area">
+      <!-- Goal Banner -->
+      <div class="goal-banner" id="goalBanner">
+        <div class="goal-icon">🎯</div>
+        <div class="goal-text">
+          <div class="goal-level" id="goalLevel">Level 1: Explorer</div>
+          <div class="goal-description" id="goalDesc">Find the gold 💰, grab it, and escape from (0,0)!</div>
+        </div>
+        <div class="goal-badges" id="goalBadges">
+          <span class="goal-badge wumpus-badge" id="wumpusBadge">👹 Wumpus: Static</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>🗺️ Cave Map</h2>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span class="percept-badge stench" style="font-size:0.65rem">Stench</span>
+            <span class="percept-badge breeze" style="font-size:0.65rem">Breeze</span>
+            <span class="percept-badge glitter" style="font-size:0.65rem">Glitter</span>
+          </div>
+        </div>
+        <div class="game-grid-wrapper">
+          <div class="game-grid" id="gameGrid"></div>
+        </div>
+        <div class="bottom-bar">
+          <div class="shortcut"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</div>
+          <div class="shortcut"><kbd>G</kbd> Grab</div>
+          <div class="shortcut"><kbd>C</kbd> Climb</div>
+          <div class="shortcut"><kbd>F</kbd> Shoot Mode</div>
+          <div class="shortcut"><kbd>Space</kbd> Auto Step</div>
+        </div>
+      </div>
+
+      <!-- Game Log -->
+      <div class="panel">
+        <div class="panel-header"><h2>📋 Action Log</h2></div>
+        <div class="panel-body">
+          <div class="game-log-list" id="gameLog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Sidebar -->
+    <div class="sidebar">
+      <!-- Stats -->
+      <div class="panel">
+        <div class="panel-header"><h2>📊 Stats</h2></div>
+        <div class="panel-body">
+          <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="stat-card score">
+              <div class="stat-value" id="statScore">0</div>
+              <div class="stat-label">Score</div>
+            </div>
+            <div class="stat-card best-score" style="border-left: 2px solid rgba(255,215,0,0.3);">
+              <div class="stat-value" id="statBestScore" style="color: #ffd700;">0</div>
+              <div class="stat-label" id="statBestScoreLabel">Best (L1)</div>
+            </div>
+            <div class="stat-card actions">
+              <div class="stat-value" id="statActions">0</div>
+              <div class="stat-label">Actions</div>
+            </div>
+            <div class="stat-card arrow">
+              <div class="stat-value" id="statArrow">✓</div>
+              <div class="stat-label">Arrow</div>
+            </div>
+            <div class="stat-card gold">
+              <div class="stat-value" id="statGold">✗</div>
+              <div class="stat-label">Gold</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="panel">
+        <div class="panel-header"><h2>🎮 Controls</h2></div>
+        <div class="panel-body">
+          <div id="shootModeBanner" class="shoot-mode-banner">🏹 SHOOT MODE — Pick Direction</div>
+          <div class="controls-grid">
+            <button class="btn ctrl-up" onclick="doAction('up')">↑</button>
+            <button class="btn ctrl-left" onclick="doAction('left')">←</button>
+            <button class="btn ctrl-right" onclick="doAction('right')">→</button>
+            <button class="btn ctrl-down" onclick="doAction('down')">↓</button>
+          </div>
+          <div class="action-buttons">
+            <button class="btn btn-success" onclick="grabGold()">✨ Grab</button>
+            <button class="btn" onclick="climbOut()">🪜 Climb</button>
+            <button class="btn btn-danger" id="btnShoot" onclick="toggleShootMode()">🏹 Shoot</button>
+            <button class="btn btn-primary" onclick="autoStep()">🤖 Step</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Current Percepts -->
+      <div class="panel">
+        <div class="panel-header"><h2>👃 Current Percepts</h2></div>
+        <div class="panel-body">
+          <div class="percept-display" id="perceptDisplay">
+            <span class="percept-tag none">None — Safe</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Knowledge / Inference -->
+      <div class="panel">
+        <div class="panel-header"><h2>🧠 AI Inference</h2></div>
+        <div class="panel-body">
+          <div class="knowledge-log" id="knowledgeLog">
+            <div class="knowledge-item">Agent initialized at (0,0). Analyzing...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- GAME OVER OVERLAY -->
+  <div class="game-over-overlay hidden" id="gameOverOverlay">
+    <div class="game-over-card">
+      <div class="result-icon" id="resultIcon">🏆</div>
+      <h2 id="resultTitle">Victory!</h2>
+      <p class="result-message" id="resultMessage">You escaped with the gold!</p>
+      <div class="final-score positive" id="finalScore">+1000</div>
+      <p class="score-label">Final Score</p>
+      <button class="btn btn-primary" onclick="showLevelSelect()" style="width:100%;justify-content:center;margin-bottom:8px;">🔄 Play Again</button>
+      <button class="btn" onclick="document.getElementById('gameOverOverlay').classList.add('hidden')" style="width:100%;justify-content:center;">Close</button>
+    </div>
+  </div>
+
+  <script src="/static/game.js"></script>
+</body>
+</html>
